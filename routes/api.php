@@ -83,19 +83,23 @@ Route::get('show-kisah/{slug}', function (Request $request, $slug) {
         $spans = $dom->getElementsByTagName('span');
 
         foreach ($spans as $span) {
-            // Remove the font-size style if it exists
+            // Get the style attribute, if it exists
             if ($span->hasAttribute('style')) {
                 $style = $span->getAttribute('style');
+
+                // Remove only the font-size related styles
                 $updatedStyle = preg_replace('/font-size\s*:\s*[^;]+;?/', '', $style);
 
+                // If there are no other styles left, remove the style attribute
                 if (empty(trim($updatedStyle))) {
                     $span->removeAttribute('style');
                 } else {
+                    // Otherwise, update the style attribute without font-size
                     $span->setAttribute('style', $updatedStyle);
                 }
             }
 
-            // Add the 'setFont' class to the span
+            // Add the 'setFont' class to each span
             if ($span->hasAttribute('class')) {
                 $existingClass = $span->getAttribute('class');
                 $span->setAttribute('class', $existingClass . ' setFont');
@@ -104,10 +108,10 @@ Route::get('show-kisah/{slug}', function (Request $request, $slug) {
             }
         }
 
-        // Save the updated HTML back to the kontent
-        $kisah->kontent = $dom->saveHTML($dom->getElementsByTagName('body')->item(0)->firstChild);
+        // Get the updated content and save it back into the model's kontent
+        $bodyContent = $dom->saveHTML($dom->getElementsByTagName('body')->item(0)->firstChild);
+        $kisah->kontent = $bodyContent;
     }
-
     return response()->json($kisah);
 });
 
