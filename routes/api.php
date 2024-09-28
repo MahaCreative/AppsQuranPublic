@@ -54,7 +54,7 @@ Route::post('delete-kisah/{slug}', function (Request $request, $slug) {
 
 
 Route::get('get-kategori', function (Request $request) {
-    $kategori = Kategori::all();
+    $kategori = Kategori::latest()->get();
     return response()->json($kategori);
 });
 Route::get('get-kisah', function (Request $request) {
@@ -73,15 +73,50 @@ Route::get('get-kisah', function (Request $request) {
 
 Route::get('show-kisah/{slug}', function (Request $request, $slug) {
     $kisah = Kisah::with('kategori')->where('slug', $slug)->first();
+
+    if ($kisah && !empty($kisah->kontent)) {
+        // Load the content into DOMDocument
+        $dom = new \DOMDocument();
+        @$dom->loadHTML(mb_convert_encoding($kisah->kontent, 'HTML-ENTITIES', 'UTF-8'));
+
+        // Get all span elements
+        $spans = $dom->getElementsByTagName('span');
+
+        foreach ($spans as $span) {
+            // Remove the font-size style if it exists
+            if ($span->hasAttribute('style')) {
+                $style = $span->getAttribute('style');
+                $updatedStyle = preg_replace('/font-size\s*:\s*[^;]+;?/', '', $style);
+
+                if (empty(trim($updatedStyle))) {
+                    $span->removeAttribute('style');
+                } else {
+                    $span->setAttribute('style', $updatedStyle);
+                }
+            }
+
+            // Add the 'setFont' class to the span
+            if ($span->hasAttribute('class')) {
+                $existingClass = $span->getAttribute('class');
+                $span->setAttribute('class', $existingClass . ' setFont');
+            } else {
+                $span->setAttribute('class', 'setFont');
+            }
+        }
+
+        // Save the updated HTML back to the kontent
+        $kisah->kontent = $dom->saveHTML($dom->getElementsByTagName('body')->item(0)->firstChild);
+    }
+
     return response()->json($kisah);
 });
 
-Route::get('create-kategori', function (Request $request) {
+Route::post('create-kategori', function (Request $request) {
     $request->validate(['nama' => 'required|min:3']);
     $kategori = Kategori::create(['nama_kategori' => $request->nama]);
-    return response()->json('success');
+    return response()->json('Berhasil menambahkan 1 kategori baru');
 });
-Route::get('delete-kategori', function (Request $request) {
+Route::post('delete-kategori', function (Request $request) {
     $kategori = Kategori::find($request->id);
     $kategori->delete();
     return response()->json('success');
